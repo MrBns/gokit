@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	berror "github.com/mrbns/gokit/berr"
 )
 
 // structural way to send Response trough http.Response Writer
@@ -13,6 +15,7 @@ type Response struct {
 	Status  int    `json:"status_code"`
 	Msg     string `json:"message"`
 	Success bool   `json:"success"`
+	Meta    any    `json:"metadata"`
 }
 
 func (d Response) Write(w http.ResponseWriter) {
@@ -29,7 +32,7 @@ func (d Response) Write(w http.ResponseWriter) {
 
 	err := json.NewEncoder(w).Encode(d)
 	if err != nil {
-		w.Write([]byte(fmt.Sprintf(`{"data":null, "success":false, "status_code": 500, "error":%v,"message":%v}`, Ternary(d.Err != nil, d.Err.Error(), "failed to parse response json"), Ternary(d.Msg != "", d.Msg, "internal server error"))))
+		w.Write([]byte(fmt.Sprintf(`{"data":null, "success":false, "status_code": 500, "error":%v,"message":%v, "metadata":null}`, Ternary(d.Err != nil, d.Err.Error(), "failed to parse response json"), Ternary(d.Msg != "", d.Msg, "internal server error"))))
 	}
 }
 func (d *Response) SetStatus(status int) *Response {
@@ -81,13 +84,29 @@ func WriteOkResponse[T any](data T, w http.ResponseWriter) {
 	OkResponse(data, "request processed successfully").Write(w)
 }
 
-// Http Handler with Error Handling
+// Http Handler with Error Handling. Just Return Error. and if you don't want to return error
+// then directly write SuccessResponse to ResponseWriter.
+// Error also can be written diretly from controller but not recommended for code readablity.
+//
 // Support default error and also some Utility Error such as InternalError, BadRequest, ForbiddenRequest, AuthorizationRequired
-
+// etc. check more on docs.
 func HttpHandler(fn func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := fn(w, r)
+
+		// Checking if error is Berror. (Unified MrBns Error)
+		if val, ok := err.(berror.BError); ok {
+			json.NewEncoder(w).Encode(Response{
+				Err:     val,
+				Status:  val.GetStatus(),
+				Msg:     val.GetMessage(),
+				Success: false,
+			})
+
+			return
+		}
+
 		if err != nil {
 			ErrResponse(err, "something went wrong").Write(w)
 			return
