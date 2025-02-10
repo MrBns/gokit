@@ -8,11 +8,10 @@ import (
 
 // Extended from [ error ]
 type BError interface {
-	error
-
 	GetStatus() int
 	GetMessage() string
-	GetError() string
+	GetError() error
+	Error() string
 }
 
 // Internal Server Error
@@ -32,9 +31,13 @@ func (v BErrorBase) GetError() error {
 	return v.Err
 }
 
+func (v BErrorBase) Error() string {
+	return v.Err.Error()
+}
+
 // Sometimes Developer needs to just send a message as error.
 // this Function is dedicated for them.
-func NewErrorMsg(msg string) *BErrorBase {
+func NewMsgError(msg string) *BErrorBase {
 	return &BErrorBase{
 		Message: msg,
 		Err:     errors.New("something went wrong"),
@@ -49,8 +52,8 @@ type BadRequest struct {
 }
 
 // Initiator of BadRequest Error
-func NewBadRequest(err error, msg string) *BadRequest {
-	return &BadRequest{
+func NewBadRequest(err error, msg string) BadRequest {
+	return BadRequest{
 		BErrorBase{
 			Err:     err,
 			Status:  400,

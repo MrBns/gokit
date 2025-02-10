@@ -2,11 +2,20 @@ package bns
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
 	berror "github.com/mrbns/gokit/berr"
 )
+
+func _ternary[T any](condition bool, truth T, falsy T) T {
+	if condition {
+		return truth
+	} else {
+		return falsy
+	}
+}
 
 // structural way to send Response trough http.Response Writer
 type Response struct {
@@ -20,8 +29,8 @@ type Response struct {
 
 func (d Response) Write(w http.ResponseWriter) {
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(d.Status)
-	w.Header().Add("content-type", "application/json")
 
 	//Fixing Status Code
 	if d.Status == 0 && d.Success {
@@ -32,7 +41,7 @@ func (d Response) Write(w http.ResponseWriter) {
 
 	err := json.NewEncoder(w).Encode(d)
 	if err != nil {
-		w.Write([]byte(fmt.Sprintf(`{"data":null, "success":false, "status_code": 500, "error":%v,"message":%v, "metadata":null}`, Ternary(d.Err != nil, d.Err.Error(), "failed to parse response json"), Ternary(d.Msg != "", d.Msg, "internal server error"))))
+		w.Write(fmt.Appendf(nil, `{"data":null, "success":false, "status_code": 500, "error":%v,"message":%v, "metadata":null}`, Ternary(d.Err != nil, d.Err.Error(), "failed to parse response json"), Ternary(d.Msg != "", d.Msg, "internal server error")))
 	}
 }
 func (d *Response) SetStatus(status int) *Response {
@@ -56,7 +65,7 @@ func ErrResponse(err error, msg string) *Response {
 		Data:    nil,
 		Err:     err,
 		Msg:     msg,
-		Status:  500,
+		Status:  400,
 		Success: false,
 	}
 	return &response
@@ -95,20 +104,24 @@ func HttpHandler(fn func(http.ResponseWriter, *http.Request) error) http.Handler
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := fn(w, r)
 
+		fmt.Printf("%v \n", err)
 		// Checking if error is Berror. (Unified MrBns Error)
 		if val, ok := err.(berror.BError); ok {
-			json.NewEncoder(w).Encode(Response{
-				Err:     val,
-				Status:  val.GetStatus(),
-				Msg:     val.GetMessage(),
-				Success: false,
-			})
+
+			ErrResponse(
+				val.GetError(),
+				_ternary(val.GetMessage() == "", val.GetError().Error(), val.GetMessage()),
+			).
+				SetStatus(val.GetStatus()).
+				Write(w)
 
 			return
+		} else {
+			fmt.Printf("%v is not Berror.Berror type", err)
 		}
 
 		if err != nil {
-			ErrResponse(err, "something went wrong").Write(w)
+			ErrResponse(errors.New("something went wrong"), err.Error()).SetStatus(400).Write(w)
 			return
 		}
 	}
