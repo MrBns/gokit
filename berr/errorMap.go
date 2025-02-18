@@ -2,20 +2,21 @@ package berr
 
 import (
 	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 )
 
-type ErrorMap map[string]error
+const ErrorSeparator = "%::%"
+
+type ErrorMap map[string][]error
 
 func (errs ErrorMap) Set(k string, v error) {
+
 	if val, ok := errs[k]; ok {
-		errs[k] = errors.New(val.Error() + "," + v.Error())
+		errs[k] = append(val, v)
 	} else {
 
-		errs[k] = v
+		errs[k] = []error{v}
 	}
 
 }
@@ -45,16 +46,6 @@ func (errs ErrorMap) Delete(key string) {
 	delete(errs, key)
 }
 
-func (errs ErrorMap) ToStringSlice() [][2]string {
-	_arr := [][2]string{}
-
-	for k, v := range errs {
-		_arr = append(_arr, [2]string{k, v.Error()})
-	}
-
-	return _arr
-}
-
 func (errs ErrorMap) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 
@@ -69,13 +60,17 @@ func (errs ErrorMap) MarshalJSON() ([]byte, error) {
 
 		buf.WriteString(`"` + k + `":`)
 
-		errsBytes, err := json.Marshal(strings.Split(v.Error(), ","))
-		if err != nil {
-			buf.WriteByte(' ')
-		} else {
+		buf.WriteByte('[')
 
-			buf.Write(errsBytes)
+		firstError := true
+		for _, e := range v {
+			if !firstError {
+				buf.WriteByte(',')
+			}
+			buf.WriteString(`"` + e.Error() + `"`)
+			firstError = false
 		}
+		buf.WriteByte(']')
 
 		first = false
 	}

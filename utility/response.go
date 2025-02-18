@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	berror "github.com/mrbns/gokit/berr"
+	"github.com/mrbns/gokit/berr"
 )
 
 func _ternary[T any](condition bool, truth T, falsy T) T {
@@ -50,6 +50,7 @@ func (d *Response) SetStatus(status int) *Response {
 }
 
 func ErrResponseWithData[T any](data T, err error, msg string) *Response {
+
 	response := Response{
 		Data:    nil,
 		Err:     err,
@@ -104,9 +105,13 @@ func HttpHandler(fn func(http.ResponseWriter, *http.Request) error) http.Handler
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := fn(w, r)
 
-		fmt.Printf("%v \n", err)
+		// Do not want extra conidtion checking if erro is empty
+		if err == nil {
+			return
+		}
+
 		// Checking if error is Berror. (Unified MrBns Error)
-		if val, ok := err.(berror.BError); ok {
+		if val, ok := err.(berr.BError); ok {
 
 			ErrResponse(
 				val.GetError(),
@@ -117,12 +122,10 @@ func HttpHandler(fn func(http.ResponseWriter, *http.Request) error) http.Handler
 
 			return
 		} else {
-			fmt.Printf("%v is not Berror.Berror type", err)
-		}
-
-		if err != nil {
+			fmt.Printf("%v is not Berror.Berror type\n", err)
 			ErrResponse(errors.New("something went wrong"), err.Error()).SetStatus(400).Write(w)
 			return
 		}
+
 	}
 }

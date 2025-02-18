@@ -30,6 +30,10 @@ func (v BErrorBase) GetMessage() string {
 func (v BErrorBase) GetError() error {
 	return v.Err
 }
+func (v *BErrorBase) SetStatus(code int) *BErrorBase {
+	v.Status = code
+	return v
+}
 
 func (v BErrorBase) Error() string {
 	return v.Err.Error()
@@ -37,7 +41,7 @@ func (v BErrorBase) Error() string {
 
 // Sometimes Developer needs to just send a message as error.
 // this Function is dedicated for them.
-func NewMsgError(msg string) *BErrorBase {
+func FromMsg(msg string) *BErrorBase {
 	return &BErrorBase{
 		Message: msg,
 		Err:     errors.New("something went wrong"),
@@ -137,8 +141,10 @@ type InternalError struct {
 	BErrorBase
 }
 
+// InternalServerError - 500
+//
 // Initiator of InternalServer Error
-func NewInternalError(err error, msg string) *BadRequest {
+func NewInternal(err error, msg string) *BadRequest {
 	return &BadRequest{
 		BErrorBase{
 			Err:     err,
