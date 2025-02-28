@@ -25,6 +25,10 @@ func (errs ErrorMap) IsNil() bool {
 	return len(errs) == 0
 }
 
+func (errs ErrorMap) HasErr() bool {
+	return len(errs) != 0
+}
+
 func (errs ErrorMap) Error() string {
 
 	message := new(strings.Builder)
