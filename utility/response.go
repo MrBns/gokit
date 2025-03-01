@@ -2,7 +2,6 @@ package bns
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -121,10 +120,17 @@ func HttpHandler(fn func(http.ResponseWriter, *http.Request) error) http.Handler
 				Write(w)
 
 			return
-		} else {
-			fmt.Printf("%v is not Berror.Berror type\n", err)
-			ErrResponse(errors.New("something went wrong"), err.Error()).SetStatus(400).Write(w)
+
+		} else if val, ok := err.(berr.ErrorMap); ok {
+
+			ErrResponse(val, "Something went wrong.").SetStatus(400).Write(w)
 			return
+
+		} else {
+
+			ErrResponse(err, err.Error()).SetStatus(400).Write(w)
+			return
+
 		}
 
 	}
