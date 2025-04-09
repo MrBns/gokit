@@ -51,7 +51,7 @@ func (d *Response) SetStatus(status int) *Response {
 func ErrResponseWithData[T any](data T, err error, msg string) *Response {
 
 	response := Response{
-		Data:    nil,
+		Data:    data,
 		Err:     err,
 		Msg:     msg,
 		Status:  500,
@@ -112,7 +112,8 @@ func HttpHandler(fn func(http.ResponseWriter, *http.Request) error) http.Handler
 		// Checking if error is Berror. (Unified MrBns Error)
 		if val, ok := err.(berr.BError); ok {
 
-			ErrResponse(
+			ErrResponseWithData(
+				val.GetData(),
 				val.GetError(),
 				_ternary(val.GetMessage() == "", val.GetError().Error(), val.GetMessage()),
 			).

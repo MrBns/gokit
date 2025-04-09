@@ -4,6 +4,7 @@ package berr
 import (
 	"errors"
 	"net/http"
+	"strings"
 )
 
 // Extended from [ error ]
@@ -11,6 +12,7 @@ type BError interface {
 	GetStatus() int
 	GetMessage() string
 	GetError() error
+	GetData() any
 	Error() string
 }
 
@@ -19,6 +21,7 @@ type BErrorBase struct {
 	Err     error  `json:"error"`
 	Status  int    `json:"status_code"`
 	Message string `json:"message"`
+	Data    any    `json:"data"`
 }
 
 func (v BErrorBase) GetStatus() int {
@@ -27,6 +30,11 @@ func (v BErrorBase) GetStatus() int {
 func (v BErrorBase) GetMessage() string {
 	return v.Message
 }
+
+func (v BErrorBase) GetData() any {
+	return v.Data
+}
+
 func (v BErrorBase) GetError() error {
 	return v.Err
 }
@@ -34,13 +42,39 @@ func (v *BErrorBase) SetStatus(code int) *BErrorBase {
 	v.Status = code
 	return v
 }
+func (v *BErrorBase) SetError(err error) *BErrorBase {
+	v.Err = err
+	return v
+}
+func (v *BErrorBase) SetMessage(msg string) *BErrorBase {
+	v.Message = msg
+	return v
+}
+
+func (v *BErrorBase) With(data any) *BErrorBase {
+	v.Data = data
+	return v
+}
 
 func (v BErrorBase) Error() string {
 	return v.Err.Error()
 }
 
+// Construct default Berror from error and string
+func From(err error, msg string) *BErrorBase {
+	if strings.HasSuffix(msg, ";") {
+		msg = msg + err.Error()
+	}
+	return &BErrorBase{
+		Message: msg,
+		Err:     err,
+		Status:  400,
+	}
+}
+
 // Sometimes Developer needs to just send a message as error.
 // this Function is dedicated for them.
+// message would be something went wrong. but can be change via SetMessage()
 func FromMsg(msg string) *BErrorBase {
 	return &BErrorBase{
 		Message: msg,
