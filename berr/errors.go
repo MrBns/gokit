@@ -61,6 +61,7 @@ func (v BErrorBase) Error() string {
 }
 
 // Construct default Berror from error and string
+// if you put ";" at the end of your message (2nd parameter) it will append your err.Erorr();
 func From(err error, msg string) *BErrorBase {
 	if strings.HasSuffix(msg, ";") {
 		msg = msg + err.Error()

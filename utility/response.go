@@ -43,11 +43,42 @@ func (d Response) Write(w http.ResponseWriter) {
 		w.Write(fmt.Appendf(nil, `{"data":null, "success":false, "status_code": 500, "error":%v,"message":%v, "metadata":null}`, Ternary(d.Err != nil, d.Err.Error(), "failed to parse response json"), Ternary(d.Msg != "", d.Msg, "internal server error")))
 	}
 }
+
+// Overrite or Set Status in Struct
 func (d *Response) SetStatus(status int) *Response {
 	d.Status = status
 	return d
 }
 
+// overrite or set Metadata in response struct;
+func (r *Response) SetMeta(meta any) *Response {
+	r.Meta = meta
+	return r
+}
+
+// overrite or set Message in response struct;
+func (r *Response) SetMessage(msg string) *Response {
+	r.Msg = msg
+	return r
+}
+
+// overrite or set Message in response struct;
+//
+// ⚠️ It will set success false and if message is empty it will set "failed to execute request."
+func (r *Response) SetError(err error) *Response {
+	if err == nil {
+		return r
+	}
+
+	if r.Msg == "" {
+		r.Msg = "failed to execute request."
+	}
+	r.Success = false
+	r.Err = err
+	return r
+}
+
+// Construct Error response but with Data field exist.
 func ErrResponseWithData[T any](data T, err error, msg string) *Response {
 
 	response := Response{
@@ -60,6 +91,7 @@ func ErrResponseWithData[T any](data T, err error, msg string) *Response {
 	return &response
 }
 
+// Construct Error Response with Error and msg;
 func ErrResponse(err error, msg string) *Response {
 	response := Response{
 		Data:    nil,
