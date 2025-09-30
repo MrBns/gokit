@@ -11,7 +11,7 @@ import (
 // Safely decoe body. becuase this fucntion will check if body is not empty.
 //
 // Return a  berr.ErrorMap map instance.
-func SafeDecodeBody_Json(r *http.Request, v any) berr.ErrorMap {
+func SafeDecodeBodyToJson(r *http.Request, v any) berr.ErrorMap {
 	errorMap := berr.NewErrorMap()
 
 	if r.Body == http.NoBody {
