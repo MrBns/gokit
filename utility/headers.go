@@ -7,7 +7,7 @@ import (
 
 // AppendHeader copies all header values from src to dst with canonicalized keys.
 // No-op if either src or dst is nil.
-func AppendHeader(dst http.Header, src http.Header) {
+func AppendHeader(src http.Header, dst http.Header) {
 	if src == nil || dst == nil {
 		return
 	}
@@ -22,9 +22,9 @@ func AppendHeader(dst http.Header, src http.Header) {
 	}
 }
 
-// HeaderFrom creates a deep copy of the provided header.
+// CopyHeaderFrom creates a deep copy of the provided header.
 // Returns empty header if src is nil.
-func HeaderFrom(src http.Header) http.Header {
+func CopyHeaderFrom(src http.Header) http.Header {
 	out := make(http.Header)
 	if src == nil {
 		return out
