@@ -2,6 +2,7 @@ package bns
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -27,10 +28,6 @@ type Response struct {
 }
 
 func (d Response) Write(w http.ResponseWriter) {
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(d.Status)
-
 	//Fixing Status Code
 	if d.Status == 0 && d.Success {
 		d.Status = 200
@@ -38,9 +35,16 @@ func (d Response) Write(w http.ResponseWriter) {
 		d.Status = 400
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(d.Status)
+
 	err := json.NewEncoder(w).Encode(d)
 	if err != nil {
-		w.Write(fmt.Appendf(nil, `{"data":null, "success":false, "status_code": 500, "error":%v,"message":%v, "metadata":null}`, Ternary(d.Err != nil, d.Err.Error(), "failed to parse response json"), Ternary(d.Msg != "", d.Msg, "internal server error")))
+		w.Write(fmt.Appendf(nil,
+			`{"data":null, "success":false, "status_code": 500, "error":%v,"message":%v, "metadata":null}`,
+			Ternary(d.Err != nil, d.Err.Error(), "failed to parse response json"),
+			Ternary(d.Msg != "", d.Msg, "internal server error")),
+		)
 	}
 }
 
@@ -105,6 +109,9 @@ func ErrResponse(err error, msg string) *Response {
 
 // Quick way to write Ok Response to responseWriter
 func WriteErrResponse(err error, w http.ResponseWriter) {
+	if err == nil {
+		err = errors.New("internal server error")
+	}
 	ErrResponse(err, err.Error()).SetStatus(500).Write(w)
 }
 
@@ -143,11 +150,15 @@ func HttpHandler(fn func(http.ResponseWriter, *http.Request) error) http.Handler
 
 		// Checking if error is Berror. (Unified MrBns Error)
 		if val, ok := err.(berr.BError); ok {
+			baseErrMsg := "unknown error"
+			if val.GetError() != nil {
+				baseErrMsg = val.GetError().Error()
+			}
 
 			ErrResponseWithData(
 				val.GetData(),
 				val.GetError(),
-				_ternary(val.GetMessage() == "", val.GetError().Error(), val.GetMessage()),
+				_ternary(val.GetMessage() == "", baseErrMsg, val.GetMessage()),
 			).
 				SetStatus(val.GetStatus()).
 				Write(w)
