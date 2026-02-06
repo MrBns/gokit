@@ -57,12 +57,21 @@ func (v *BErrorBase) With(data any) *BErrorBase {
 }
 
 func (v BErrorBase) Error() string {
-	return v.Err.Error()
+	if v.Err != nil {
+		return v.Err.Error()
+	}
+	if v.Message != "" {
+		return v.Message
+	}
+	return "unknown error"
 }
 
 // Construct default Berror from error and string
 // if you put ";" at the end of your message (2nd parameter) it will append your err.Erorr();
 func From(err error, msg string) *BErrorBase {
+	if err == nil {
+		err = errors.New("something went wrong")
+	}
 	if strings.HasSuffix(msg, ";") {
 		msg = msg + err.Error()
 	}
@@ -179,8 +188,11 @@ type InternalError struct {
 // InternalServerError - 500
 //
 // Initiator of InternalServer Error
-func NewInternal(err error, msg string) *BadRequest {
-	return &BadRequest{
+func NewInternal(err error, msg string) *InternalError {
+	if err == nil {
+		err = errors.New("internal server error")
+	}
+	return &InternalError{
 		BErrorBase{
 			Err:     err,
 			Status:  500,

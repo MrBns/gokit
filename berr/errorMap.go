@@ -1,7 +1,7 @@
 package berr
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -51,37 +51,20 @@ func (errs ErrorMap) Delete(key string) {
 }
 
 func (errs ErrorMap) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-
-	buf.WriteByte('{')
-	first := true
-
+	serialized := make(map[string][]string, len(errs))
 	for k, v := range errs {
-
-		if !first {
-			buf.WriteByte(',')
-		}
-
-		buf.WriteString(`"` + k + `":`)
-
-		buf.WriteByte('[')
-
-		firstError := true
+		values := make([]string, 0, len(v))
 		for _, e := range v {
-			if !firstError {
-				buf.WriteByte(',')
+			if e == nil {
+				values = append(values, "")
+				continue
 			}
-			buf.WriteString(`"` + e.Error() + `"`)
-			firstError = false
+			values = append(values, e.Error())
 		}
-		buf.WriteByte(']')
-
-		first = false
+		serialized[k] = values
 	}
 
-	buf.WriteByte('}')
-
-	return buf.Bytes(), nil
+	return json.Marshal(serialized)
 }
 
 // Helper function to initialize new Error map.

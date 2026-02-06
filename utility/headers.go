@@ -36,7 +36,7 @@ func CopyHeaderFrom(src http.Header) http.Header {
 		}
 		ck := textproto.CanonicalMIMEHeaderKey(key)
 
-		out[ck] = vals
+		out[ck] = append([]string(nil), vals...)
 	}
 
 	return out
